@@ -1,0 +1,37 @@
+1. curl -X 'GET' \
+  'http://localhost:8080/api/links' \
+  -H 'accept: */*'
+
+2. curl -X 'POST' \
+  'http://localhost:8080/api/links' \
+  -H 'accept: */*' \
+  -H 'Content-Type: application/json' \
+  -d '{
+  "url": "https://lnu.edu.ua",
+  "alias": "lnu-main"
+}'
+
+3. curl -X 'GET' \
+  'http://localhost:8080/api/links/aB3xK9' \
+  -H 'accept: */*'
+
+4. curl -X 'PATCH' \
+  'http://localhost:8080/api/links/aB3xK9' \
+  -H 'accept: */*' \
+  -H 'Content-Type: application/json' \
+  -d '{
+  "url": "https://electronics.lnu.edu.ua"
+}'
+
+5. curl -X 'DELETE' \
+  'http://localhost:8080/api/links/aB3xK9' \
+  -H 'accept: */*'
+
+6. curl -X 'GET' \
+  'http://localhost:8080/aB3xK9' \
+  -H 'accept: */*'
+
+7. curl -X 'GET' \
+  'http://localhost:8080/health' \
+  -H 'accept: */*'
+  
