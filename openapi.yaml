@@ -1,0 +1,266 @@
+openapi: 3.1.0
+info:
+  title: URL Shortener API
+  version: 1.0.0
+  description: REST API сервісу скорочення посилань (Лабораторна робота № 6)
+  license:
+    name: MIT
+servers:
+  - url: http://localhost:8080
+    description: Локальний сервер у Docker
+
+tags:
+  - name: Links
+    description: Керування короткими посиланнями
+  - name: Redirect
+    description: Перенаправлення за коротким кодом
+  - name: System
+    description: Службові ендпоінти
+
+paths:
+  /health:
+    get:
+      operationId: getHealth
+      summary: Перевірка стану сервера та бази даних
+      tags: [System]
+      security: []
+      responses:
+        '200':
+          description: Сервер і база даних працюють
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [status, database]
+                properties:
+                  status: { type: string, example: ok }
+                  database: { type: string, example: connected }
+        '503':
+          description: База даних недоступна
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [status, database]
+                properties:
+                  status: { type: string, example: error }
+                  database: { type: string, example: disconnected }
+
+  /api/links:
+    get:
+      operationId: listLinks
+      summary: Отримати перелік усіх коротких посилань
+      tags: [Links]
+      security: []
+      responses:
+        '200':
+          description: Список усіх посилань
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Link'
+
+    post:
+      operationId: createLink
+      summary: Створити нове коротке посилання
+      tags: [Links]
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateLinkRequest'
+      responses:
+        '201':
+          description: Коротке посилання успішно створено
+          headers:
+            Location:
+              description: Шлях до створеного ресурсу
+              schema:
+                type: string
+                example: /api/links/aB3xK9
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Link'
+        '400':
+          description: Некоректна URL-адреса або неприпустимий формат alias
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: Запропонований alias уже зайнятий
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/links/{code}:
+    parameters:
+      - name: code
+        in: path
+        required: true
+        description: Унікальний короткий код або alias посилання
+        schema:
+          type: string
+          example: aB3xK9
+
+    get:
+      operationId: getLinkByCode
+      summary: Отримати детальну інформацію про посилання
+      tags: [Links]
+      security: []
+      responses:
+        '200':
+          description: Інформація про посилання
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Link'
+        '404':
+          description: Посилання з таким кодом не знайдено
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+    patch:
+      operationId: updateLinkUrl
+      summary: Змінити оригінальну адресу для існуючого посилання
+      tags: [Links]
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateLinkRequest'
+      responses:
+        '200':
+          description: Цільову адресу оновлено
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Link'
+        '400':
+          description: Некоректна нова URL-адреса
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Посилання з таким кодом не знайдено
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+    delete:
+      operationId: deleteLinkByCode
+      summary: Видалити коротке посилання
+      tags: [Links]
+      security: []
+      responses:
+        '204':
+          description: Посилання успішно видалено
+        '404':
+          description: Посилання з таким кодом не знайдено
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /{code}:
+    get:
+      operationId: redirectByCode
+      summary: Перейти за коротким посиланням (302 редірект)
+      tags: [Redirect]
+      security: []
+      parameters:
+        - name: code
+          in: path
+          required: true
+          description: Унікальний короткий код посилання
+          schema:
+            type: string
+            example: aB3xK9
+      responses:
+        '302':
+          description: Тимчасове перенаправлення на оригінальну URL-адресу
+          headers:
+            Location:
+              description: Оригінальна цільова URL-адреса
+              schema:
+                type: string
+                format: uri
+        '404':
+          description: Коротке посилання не знайдено
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+components:
+  schemas:
+    Link:
+      type: object
+      required: [code, shortUrl, originalUrl, clicks, createdAt]
+      properties:
+        code:
+          type: string
+          example: aB3xK9
+        shortUrl:
+          type: string
+          format: uri
+          example: http://localhost:8080/aB3xK9
+        originalUrl:
+          type: string
+          format: uri
+          example: https://lnu.edu.ua
+        clicks:
+          type: integer
+          minimum: 0
+          example: 5
+        createdAt:
+          type: string
+          format: date-time
+          example: '2026-11-23T17:00:00.000Z'
+
+    CreateLinkRequest:
+      type: object
+      required: [url]
+      properties:
+        url:
+          type: string
+          format: uri
+          description: Оригінальна довга URL-адреса (http або https)
+          example: https://lnu.edu.ua
+        alias:
+          type: string
+          minLength: 3
+          maxLength: 32
+          pattern: '^[a-zA-Z0-9_-]+$'
+          description: Власний короткий код (опціонально)
+          example: lnu-main
+
+    UpdateLinkRequest:
+      type: object
+      required: [url]
+      properties:
+        url:
+          type: string
+          format: uri
+          description: Нова цільова URL-адреса (http або https)
+          example: https://electronics.lnu.edu.ua
+
+    ErrorResponse:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: string
+          example: Посилання не знайдено
